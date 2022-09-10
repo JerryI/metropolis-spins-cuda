@@ -1,4 +1,5 @@
 #!/usr/bin/env wolframscript
+(* ::Package:: *)
 
 SetAttributes[logWrite,HoldAllComplete];
 logWrite[message_]:=WriteString[Streams["stdout"],message<>"\n"];
@@ -82,7 +83,7 @@ SaveState[pic_:None] := (
     DumpSave[FileNameJoin[{projDir, StringTemplate["``.dump"][state]}], {poso, spino, T, Hx, Hy, Hz}];
 
     If[!(pic === None),
-        Export[FileNameJoin[{projDir, StringTemplate["``.png"][state]}], pic];
+        Export[FileNameJoin[{projDir, StringTemplate["``_``.png"][state, Hx]}], pic];
     ];
 
     state = state + 1;
@@ -91,7 +92,7 @@ SaveState[pic_:None] := (
 ShowSlice[z_:2] := (
     Graphics[{Arrowheads[
          0.02], ({RGBColor[
-             Round[Abs@Normalize@Re@Take[spino[[#[[1]]]], 3], 1]], 
+             Round[Abs@Normalize@Re@Take[spino[[#[[1]]]], 3], 0.5]], 
             Arrow[{#[[2]][[
                1 ;; 2]], (#[[2]] + 1.2 Re@spino[[#[[1]]]])[[
                1 ;; 2]]}]} & /@ 
@@ -169,7 +170,7 @@ round := (Do[
     
     prev = next;
    
- , {i, RandomInteger[{0, Length[supercell] - 1}, 80000]}]);
+ , {i, RandomInteger[{0, Length[supercell] - 1}, 4*80000]}]);
 
  benchmark := (
     s = {0., 0., 0.};
@@ -198,18 +199,23 @@ s = {0., 0., 0.};
 prev = RandomInteger[{0, Length[supercell] - 1}];
 
 "Benchmarking..."//ToString//logWrite;
-benchmark//logWrite;
+benchmark//ToString//logWrite;
 
 
 
 Do[
-If[state-760 > 0, Hx = -10.; Hy = -0.1];
-If[state-760 > 500, Hx = -20.; Hy = 0.1];
-If[state-760 > 1000, Hx = -30.; Hy = 0.1];
-If[state-760 > 1500, Hx = -40.; Hy = -0.1];
+
+	(*Hx = -1 - Round[(state-760)/500]/2.;*)
+	Hx = 0;
+	Hz = 0;
+	Hy = 0;
+
 Hx//ToString//logWrite;
   round;
   
-  SaveState[Show[ShowSlice[0], ImageSize->200]];
+  SaveState[Show[ShowSlice[0], ImageSize->500]];
   
-, {j, 1, 5000}];
+, {j, 1, 50000}];
+
+
+
