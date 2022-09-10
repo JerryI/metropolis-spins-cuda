@@ -148,3 +148,44 @@ __global__ void calcFields(
 
 }
 
+
+__global__ void calcMag(
+    float4* spin,
+    float4* partialField
+)
+
+{
+    __shared__ float4 localSums[1024];
+
+    unsigned int tid = getLocalId();
+    unsigned int bid = getGroupId();
+    unsigned int localSize = getLocalSize();
+    unsigned int gid = getGlobalId();
+
+
+
+    localSums[tid].x = 2*spin[gid].x;
+    localSums[tid].y = 2*spin[gid].y;
+    localSums[tid].z = 2*spin[gid].z;
+
+    // Loop for computing localSums : divide WorkGroup into 2 parts
+    for (unsigned int stride = localSize/2; stride>0; stride /=2)
+    {
+        // Waiting for each 2x2 addition into given workgroup
+        __syncthreads();
+
+        // Add elements 2 by 2 between local_id and local_id + stride
+        if (tid < stride)
+            localSums[tid] += localSums[tid + stride];
+    }
+
+    __syncthreads();
+    // Write result into partialSums[nWorkGroups]
+    if (tid == 0) {
+        partialField[bid].x = localSums[0].x;
+        partialField[bid].y = localSums[0].y;
+        partialField[bid].z = localSums[0].z;
+    } 
+
+}
+

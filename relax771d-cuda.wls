@@ -46,12 +46,15 @@ GPUPrepare := (
         {"Float[4]", "_", "Input"}, 
         "Float", "Float", "Float", "Float", "Float", 
         {"Float[4]", _, "Output"}, _Integer, _Integer}, 1024, "ShellOutputFunction" -> Print]; 
+
+    calcMag = CUDAFunctionLoad[File["field.cu"], "calcMag", {
+        {"Float[4]", _, "InputOutput"}, 
+        {"Float[4]", _, "Output"}}, 1024, "ShellOutputFunction" -> Print];        
     
 
     pos = CUDAMemoryLoad[poso, "Float[4]"];
     spin = CUDAMemoryLoad[spino, "Float[4]"];
-    ext = CUDAMemoryLoad[Table[{0, 0, 0, 0} // N, {i, 1, 2}], "Float[4]"];
-    slots = Ceiling[Length[supercell]/1024] + 1;
+    slots = Ceiling[Length[supercell]/1024];
     field = CUDAMemoryLoad[Table[{0, 0, 0, 0} // N, {i, 1, slots}], "Float[4]"]; 
 );
 
@@ -158,6 +161,11 @@ eigensolve[type_, force_] := (If[type < 0.,
           Exp[-(({-3/2, -1/2, 1/2, 3/2} Norm[vec])/(k T))] -> {-3/
              2, -1/2, 1/2, 3/2}, 1]] ]]);
 
+mag:= (
+  calcMag[spin, field, Length[supercell]];
+  Take[2.0*(CUDAMemoryGet[field]//Total)/Length[supercell],3]
+);
+
 round := (Do[
     
     next = i;
@@ -210,8 +218,9 @@ Do[
 	Hz = 0;
 	Hy = 0;
 
-Hx//ToString//logWrite;
   round;
+
+  StringTemplate["Field = ``T, Mag = `` mu/fu"][Hx, calcMag]//logWrite;
   
   SaveState[Show[ShowSlice[0], ImageSize->500]];
   
